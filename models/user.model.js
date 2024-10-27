@@ -15,7 +15,6 @@ const userSchema = new Schema({
         minlength: [3, "Full Name must be at least 3 characters long"],
         trim: true,
         unique: false,
-        index: true
     },
 
     email: {
@@ -43,7 +42,7 @@ const userSchema = new Schema({
             type: String
 
         },
-        secqure_url: {
+        secure_url: {
             type: String
             
         }
@@ -92,7 +91,7 @@ userSchema.methods = {
                 _id: this._id, 
                 fullName: this.fullName,
                 email: this.email, 
-                payment: this.payment, 
+                
                 role: this.role 
             }, process.env.JWT_SECRET, {
             expiresIn: process.env.JWT_EXPIRES_TIME,
@@ -102,21 +101,21 @@ userSchema.methods = {
 
     comparePassword: async function (plainTextPassword) {
         return await bcrypt.compare(plainTextPassword, this.password);
-    },
+        },
 
-        // This will generate a token for password reset
-    generatePasswordResetToken: async function () {
-        // creating a random token using node's built-in crypto module
-        const resetToken = crypto.randomBytes(20).toString('hex');
+            // This will generate a token for password reset
+        generatePasswordResetToken: async function () {
+            // creating a random token using node's built-in crypto module
+            const resetToken = crypto.randomBytes(20).toString('hex');
 
-        // Again using crypto module to hash the generated resetToken with sha256 algorithm and storing it in database
-        this.forgotPasswordToken = crypto
-        .createHash('sha256')
-        .update(resetToken)
-        .digest('hex');
+            // Again using crypto module to hash the generated resetToken with sha256 algorithm and storing it in database
+            this.forgotPasswordToken = crypto
+            .createHash('sha256')
+            .update(resetToken)
+            .digest('hex');
 
-        // Adding forgot password expiry to 15 minutes
-        this.forgotPasswordExpiry = Date.now() + 15 * 60 * 1000;
+            // Adding forgot password expiry to 15 minutes
+            this.forgotPasswordExpiry = Date.now() + 15 * 60 * 1000;
 
         return resetToken;
     },

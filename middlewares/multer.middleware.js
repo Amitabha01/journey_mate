@@ -3,15 +3,17 @@ import path from "path";
 import multer from "multer";
 
 const upload = multer({
-    dest: "uploads/",
+    // dest: "uploads/",
     limits: { fileSize: 50 * 1024 * 1024 },  //50mb size is max limit
     storage: multer.diskStorage({
-        destination: "uploads/",
-        filename: (_req, file, cb) => {
+        destination: function (_req, file, cb) {
+            cb(null, "./uploads");
+        },
+        filename: function (_req, file, cb) {
             cb(null, file.originalname);
         },
     }),
-    fileFilter: (_req, file, cb) => {
+    fileFilter: function (_req, file, cb) {
         let ext = path.extname(file.originalname);
 
         if (

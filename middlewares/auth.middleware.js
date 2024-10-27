@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 const isLoggedIn = async (req, res, next) => {
     const { token } = req.cookies;
 
-    if (!token) {
+    if (!token) { 
         return next(new AppError('You are not logged in. Please log in to get access', 401));
         
     }

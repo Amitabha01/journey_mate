@@ -14,7 +14,7 @@ const cookieOptions = {
     secure: process.env.NODE_ENV === 'production' ? true : false,
 };
 
-const register = async (req, res, next) => {
+const register = async function (req, res, next) {
     const { fullName, email, password } = req.body;
     //validation fields
 
@@ -26,6 +26,8 @@ const register = async (req, res, next) => {
 
     try {
         const userExists = await User.findOne({ email });
+        console.log('userExists', userExists);
+        
         if (userExists) {
             return next (new AppError ('User already exists', 409));
         }
@@ -35,16 +37,19 @@ const register = async (req, res, next) => {
             return next(new AppError('Name cannot be null', 400));
         }
     
-    
+        
         const user = await User.create({
             fullName, 
             email, 
             password,
             avater: {
-                public_id: email,
-                secqure_url: "https://cdn.pixabay.com/photo/2014/03/25/16/54/user-297566_640.png",
+                public_id: 'somethingID',
+                secure_url: "https://cdn.pixabay.com/photo/2014/03/25/16/54/user-297566_640.png",
+            
             },
         });
+        console.log('user', user);
+        
     
         if(!user) {
             return next (new AppError ('Registration failed, Please try again', 400));
@@ -59,6 +64,8 @@ const register = async (req, res, next) => {
                 api_key: process.env.CLOUDINARY_API_KEY,
                 api_secret: process.env.CLOUDINARY_API_SECRET
             });
+
+            console.log('before try');
             
             try {
                 const result = await cloudinary.v2.uploader.upload(req.file.path, {
@@ -72,11 +79,15 @@ const register = async (req, res, next) => {
                 if (result) {
                     user.avater = {
                         public_id: result.public_id,
-                        secqure_url: result.secqure_url,
+                        secure_url: result.secure_url,
                     };
     
                     //remove file from server
-                    fs.rm(`uploads/${req.file.filename}`);
+                    try {
+                        await fs.rm(`uploads/${req.file.filename}`);
+                    } catch (error) {
+                        return next(new AppError(error || "File removal failed, Please try again", 500));
+                    }
                 }
                 
             } catch (error) {
@@ -99,36 +110,56 @@ const register = async (req, res, next) => {
             user,
         });
     } catch (error) {
-        if (error.code === 11000) {
-            return res.status(409).json({ status: "error", success: false, message: "Duplicate key error: User already exists" });
-        }
-        return next(new AppError('An error occurred while registering the user', 500));
+        console.log(error);
+        
+        return res.status(500).json({
+            success: false,
+            message: "An error occurred while registering user",
+            error,
+          });
     }
     
     
 };
 
-const login = async (req, res, next) => {
+const login = async function (req, res, next) {
 
     try {
 
         const { email, password } = req.body;
-
+        console.log(email, password);
         if (!email || !password) {
             return next (new AppError ('All fields are required', 400));
         };
-
+        
         const user = await User. findOne({email
         }).select("+password");
 
-        if (!user || !user.comparePassword(password)) {
-            return next (new AppError ('Email or password does not match', 400));
+        // Check if user exists
+
+        if (!user) {
+            return next (new AppError ('User does not exists', 400));
         };
 
+       // Check if password is correct
+       const isMatch = await user.comparePassword(password);
+       if (!isMatch) {
+        return next (new AppError ('Password does not match', 401));
+       }
+
+       // Generate token
+
         const token = await user.generateJwtToken();
+
+        //Remove password from response
+
         user.password = undefined;
 
+        // Set cookie and send response
+
         res.cookie("token", token, cookieOptions);
+
+        
 
         res.status(200).json({
             success: true,
@@ -136,13 +167,17 @@ const login = async (req, res, next) => {
             user,
         });
 
-    } catch (e) {
-            return next (new AppError (e.message, 500));
-        };
+    } catch (error) {
+        console.log(error);
+        console.log(error.message);
+        
+        
+        return next (new AppError (error.message, 500));
+    };
     
 };
 
-const logout = (_req, res, _next) => {
+const logout = async function (_req, res, _next) {
     res.cookie("token", null, { 
         httpOnly: true,
         maxAge: 0,

@@ -37,6 +37,7 @@ app.use('/ping', (_req, res) => {
 app.use('/api/v1/user', userRoutes);
 
 
+
 // If user hits an endpoint that doesn't exist, return a 404 error
 app.all('*', (_req, res) => {
     res.status(404).send('OOPS!!!404 Not Found');
